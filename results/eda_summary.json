@@ -1,0 +1,26 @@
+{
+  "num_records": 4294,
+  "num_images_on_disk": 4294,
+  "num_labeled": 3684,
+  "pct_labeled": 0.8579413134606427,
+  "fresh_weight_stats": {
+    "count": 3684.0,
+    "mean": 0.2602891476655809,
+    "std": 0.2895584056221591,
+    "min": 0.0021,
+    "25%": 0.058,
+    "50%": 0.148,
+    "75%": 0.365,
+    "max": 2.113
+  },
+  "age_missing_pct": 0.11457848160223567,
+  "target_missing_pct": 0.14205868653935724,
+  "plants_with_multiple_samples": 168,
+  "max_images_per_plant": 42,
+  "timestamp_span_days": 186,
+  "data_quality_issues": [
+    "Roughly 14% of the rows have no fresh_weight_total label, so a notable part of the imagery cannot be used for supervised training.",
+    "age_days is missing for more than 10% of entries, limiting the reliability of temporal analysis.",
+    "Multiple images per plant exist, so random train/test splits risk leakage without grouping by plant_number."
+  ]
+}

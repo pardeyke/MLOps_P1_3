@@ -1,0 +1,10 @@
+2025-11-17 17:31:23,644 - INFO - Starting training run.
+2025-11-17 17:31:23,645 - INFO - Arguments: {'epochs': 2, 'batch_size': 16, 'learning_rate': 0.0005, 'model_name': 'resnet18', 'data_dir': WindowsPath('infos/mlops_biomass_data'), 'labels_path': WindowsPath('infos/mlops_biomass_data/digital_biomass_labels.xlsx'), 'image_dir': WindowsPath('infos/mlops_biomass_data/images_med_res'), 'val_split': 0.2, 'num_workers': 0, 'seed': 42, 'freeze_backbone': True, 'unfreeze_backbone': False, 'device': 'auto', 'model_out': WindowsPath('models/resnet18_biomass.pt'), 'curves_path': WindowsPath('results/training_curves.png'), 'metrics_path': WindowsPath('results/metrics.txt')}
+2025-11-17 17:31:23,702 - INFO - Using device: cpu
+2025-11-17 17:31:25,315 - INFO - Training samples: 2911 | Validation samples: 773
+2025-11-17 17:32:54,589 - INFO - Epoch 1/2 - train_loss: 0.07013 - val_loss: 0.03420 - val_rmse: 0.18494
+2025-11-17 17:32:54,641 - INFO - Saved new best model to models\resnet18_biomass.pt
+2025-11-17 17:34:05,005 - INFO - Epoch 2/2 - train_loss: 0.04897 - val_loss: 0.03855 - val_rmse: 0.19633
+2025-11-17 17:34:05,247 - INFO - Saved training curves to results\training_curves.png
+2025-11-17 17:34:05,248 - INFO - Saved metrics to results\metrics.txt
+2025-11-17 17:34:05,248 - INFO - Training complete.
