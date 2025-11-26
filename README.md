@@ -46,7 +46,7 @@ Sampled views highlight heterogeneous backgrounds (soil moisture, trays), lighti
 
 ![Correlation heatmap](figures/correlation_heatmap.png)
 
-Leaf and plant surface area correlate most with biomass, but these measurements contain many missing values. Environmental readings (temperature, humidity, illuminance) show weak correlation, so the model should focus on visual cues.
+Leaf and plant surface area correlate most with biomass, but these measurements contain many missing values. Environmental readings (temperature, humidity, illuminance) show weak correlation, so the model should focus on visual cues. Also, the experiment_id has a stronger negative correlation. This feature should not be included in training, but it may be useful for obtaining heterogeneous training and test sets.
 
 ### 4. Biomass vs. Plant Age
 

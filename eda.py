@@ -91,6 +91,7 @@ def save_correlation_heatmap(df: pd.DataFrame) -> None:
         "plant_surface_area",
         "leaf_surface_area",
         "shoot_root_ratio_fresh",
+        "experiment_id", # it is not a numeric variable per se, but including it to see if any correlation exists
     ]
     available = [col for col in candidate_columns if col in df.columns]
     data = df[available + ["fresh_weight_total"]]
@@ -170,6 +171,7 @@ def save_pixel_analysis(df: pd.DataFrame, max_images: int = 500) -> None:
         fill=True,
         common_norm=False,
         alpha=0.35,
+        palette={"R": "red", "G": "green", "B": "blue"},
     )
     plt.title("Distribution of Mean RGB Intensities per Image")
     plt.xlabel("Mean channel intensity")
