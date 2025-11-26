@@ -28,17 +28,21 @@ def load_dataset() -> pd.DataFrame:
     if not LABELS_PATH.exists():
         raise FileNotFoundError(f"Could not find {LABELS_PATH}")
     df = pd.read_excel(LABELS_PATH)
+
+    # converts the timestamp column from Unix seconds to proper pandas datetime64, and errors="coerce" silently turns any invalid entries into NaT so downstream code can rely on consistent datetime types without crashing.
     df["timestamp"] = pd.to_datetime(df["timestamp"], unit="s", errors="coerce")
     return df
 
 
 def save_target_distribution(df: pd.DataFrame) -> None:
+    # remove NaN values for plotting
     target = df["fresh_weight_total"].dropna()
+
     plt.figure(figsize=(8, 6))
     sns.histplot(target, bins=40, kde=True, color="#2c7fb8")
     plt.title("Fresh Biomass Distribution")
     plt.xlabel("fresh_weight_total [g]")
-    plt.ylabel("Count")
+    plt.ylabel("Plants count")
     plt.tight_layout()
     plt.savefig(FIGURES_DIR / "target_distribution.png", dpi=200)
     plt.close()
