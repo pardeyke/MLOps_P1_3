@@ -94,10 +94,10 @@ Artifacts:
 
 Validation performance:
 
-| Metric | Value (best epoch = 1) |
+| Metric | Value (after 20 epochs) |
 | --- | --- |
-| MSE | 0.0342 |
-| RMSE | 0.1850 g |
+| MSE | 0.0242 |
+| RMSE | 0.1557 |
 
 ![Training curves](results/training_curves.png)
 
