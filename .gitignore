@@ -1,2 +1,11 @@
+# Training data
 /infos
+
+# Model files
 /models
+
+# macOS system files
+.DS_Store
+
+#Python virtual environment
+.venv/*
