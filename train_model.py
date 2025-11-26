@@ -47,9 +47,9 @@ def set_seed(seed: int) -> None:
 def get_git_hash() -> Optional[str]:
     try:
         result = subprocess.check_output(["git", "rev-parse", "HEAD"], stderr=subprocess.DEVNULL)
+        return result.decode("utf-8").strip()
     except Exception:
         return None
-    return result.decode("utf-8").strip()
 
 
 def setup_logging() -> logging.Logger:

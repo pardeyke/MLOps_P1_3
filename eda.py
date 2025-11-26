@@ -211,7 +211,7 @@ def collect_summary(df: pd.DataFrame) -> Dict[str, object]:
         issues.append("age_days is missing for more than 10% of entries, limiting the reliability of temporal analysis.")
     if summary["max_images_per_plant"] > 5:
         issues.append(
-            "Multiple images per plant exist, so random train/test splits risk leakage without grouping by plant_number."
+            "Multiple images per plant exist, so random train/test splits risk leakage without grouping by plant_number. Same goes for experiment_id."
         )
     summary["data_quality_issues"] = issues
     return summary

@@ -1,10 +1,37 @@
-2025-11-17 17:31:23,644 - INFO - Starting training run.
-2025-11-17 17:31:23,645 - INFO - Arguments: {'epochs': 2, 'batch_size': 16, 'learning_rate': 0.0005, 'model_name': 'resnet18', 'data_dir': WindowsPath('infos/mlops_biomass_data'), 'labels_path': WindowsPath('infos/mlops_biomass_data/digital_biomass_labels.xlsx'), 'image_dir': WindowsPath('infos/mlops_biomass_data/images_med_res'), 'val_split': 0.2, 'num_workers': 0, 'seed': 42, 'freeze_backbone': True, 'unfreeze_backbone': False, 'device': 'auto', 'model_out': WindowsPath('models/resnet18_biomass.pt'), 'curves_path': WindowsPath('results/training_curves.png'), 'metrics_path': WindowsPath('results/metrics.txt')}
-2025-11-17 17:31:23,702 - INFO - Using device: cpu
-2025-11-17 17:31:25,315 - INFO - Training samples: 2911 | Validation samples: 773
-2025-11-17 17:32:54,589 - INFO - Epoch 1/2 - train_loss: 0.07013 - val_loss: 0.03420 - val_rmse: 0.18494
-2025-11-17 17:32:54,641 - INFO - Saved new best model to models\resnet18_biomass.pt
-2025-11-17 17:34:05,005 - INFO - Epoch 2/2 - train_loss: 0.04897 - val_loss: 0.03855 - val_rmse: 0.19633
-2025-11-17 17:34:05,247 - INFO - Saved training curves to results\training_curves.png
-2025-11-17 17:34:05,248 - INFO - Saved metrics to results\metrics.txt
-2025-11-17 17:34:05,248 - INFO - Training complete.
+2025-11-26 19:06:21,234 - INFO - Starting training run.
+2025-11-26 19:06:21,234 - INFO - Arguments: {'epochs': 20, 'batch_size': 32, 'learning_rate': 0.001, 'model_name': 'resnet18', 'data_dir': PosixPath('infos/mlops_biomass_data'), 'labels_path': PosixPath('infos/mlops_biomass_data/digital_biomass_labels.xlsx'), 'image_dir': PosixPath('infos/mlops_biomass_data/images_med_res'), 'val_split': 0.2, 'num_workers': 0, 'seed': 42, 'freeze_backbone': False, 'unfreeze_backbone': False, 'device': 'auto', 'model_out': PosixPath('models/biomass_resnet.pt'), 'curves_path': PosixPath('results/training_curves.png'), 'metrics_path': PosixPath('results/metrics.txt')}
+2025-11-26 19:06:21,254 - INFO - Git commit: f71ed25e96db238daddccf6074700efef5d363c9
+2025-11-26 19:06:21,255 - INFO - Using device: cpu
+2025-11-26 19:06:21,763 - INFO - Training samples: 2911 | Validation samples: 773
+2025-11-26 19:07:48,337 - INFO - Epoch 1/20 - train_loss: 0.13898 - val_loss: 0.03944 - val_rmse: 0.19860
+2025-11-26 19:07:48,372 - INFO - Saved new best model to models/biomass_resnet.pt
+2025-11-26 19:09:17,442 - INFO - Epoch 2/20 - train_loss: 0.04763 - val_loss: 0.03058 - val_rmse: 0.17488
+2025-11-26 19:09:17,478 - INFO - Saved new best model to models/biomass_resnet.pt
+2025-11-26 19:10:43,391 - INFO - Epoch 3/20 - train_loss: 0.04357 - val_loss: 0.03098 - val_rmse: 0.17600
+2025-11-26 19:12:13,296 - INFO - Epoch 4/20 - train_loss: 0.04112 - val_loss: 0.02701 - val_rmse: 0.16434
+2025-11-26 19:12:13,331 - INFO - Saved new best model to models/biomass_resnet.pt
+2025-11-26 19:13:39,448 - INFO - Epoch 5/20 - train_loss: 0.04172 - val_loss: 0.03088 - val_rmse: 0.17572
+2025-11-26 19:15:06,592 - INFO - Epoch 6/20 - train_loss: 0.04150 - val_loss: 0.02600 - val_rmse: 0.16125
+2025-11-26 19:15:06,627 - INFO - Saved new best model to models/biomass_resnet.pt
+2025-11-26 19:16:32,582 - INFO - Epoch 7/20 - train_loss: 0.04123 - val_loss: 0.02598 - val_rmse: 0.16118
+2025-11-26 19:16:32,616 - INFO - Saved new best model to models/biomass_resnet.pt
+2025-11-26 19:18:00,407 - INFO - Epoch 8/20 - train_loss: 0.03827 - val_loss: 0.02675 - val_rmse: 0.16356
+2025-11-26 19:19:29,142 - INFO - Epoch 9/20 - train_loss: 0.03640 - val_loss: 0.02834 - val_rmse: 0.16836
+2025-11-26 19:21:00,096 - INFO - Epoch 10/20 - train_loss: 0.03957 - val_loss: 0.02530 - val_rmse: 0.15906
+2025-11-26 19:21:00,134 - INFO - Saved new best model to models/biomass_resnet.pt
+2025-11-26 19:22:31,358 - INFO - Epoch 11/20 - train_loss: 0.03617 - val_loss: 0.02683 - val_rmse: 0.16379
+2025-11-26 19:23:55,006 - INFO - Epoch 12/20 - train_loss: 0.03712 - val_loss: 0.02511 - val_rmse: 0.15845
+2025-11-26 19:23:55,042 - INFO - Saved new best model to models/biomass_resnet.pt
+2025-11-26 19:25:17,141 - INFO - Epoch 13/20 - train_loss: 0.03535 - val_loss: 0.02611 - val_rmse: 0.16159
+2025-11-26 19:26:39,014 - INFO - Epoch 14/20 - train_loss: 0.03740 - val_loss: 0.02784 - val_rmse: 0.16686
+2025-11-26 19:28:00,689 - INFO - Epoch 15/20 - train_loss: 0.03740 - val_loss: 0.02543 - val_rmse: 0.15948
+2025-11-26 19:29:23,345 - INFO - Epoch 16/20 - train_loss: 0.03447 - val_loss: 0.02900 - val_rmse: 0.17029
+2025-11-26 19:30:45,972 - INFO - Epoch 17/20 - train_loss: 0.03506 - val_loss: 0.02687 - val_rmse: 0.16393
+2025-11-26 19:32:07,850 - INFO - Epoch 18/20 - train_loss: 0.03700 - val_loss: 0.02431 - val_rmse: 0.15593
+2025-11-26 19:32:07,888 - INFO - Saved new best model to models/biomass_resnet.pt
+2025-11-26 19:33:29,976 - INFO - Epoch 19/20 - train_loss: 0.03545 - val_loss: 0.02899 - val_rmse: 0.17028
+2025-11-26 19:34:51,985 - INFO - Epoch 20/20 - train_loss: 0.03492 - val_loss: 0.02425 - val_rmse: 0.15572
+2025-11-26 19:34:52,020 - INFO - Saved new best model to models/biomass_resnet.pt
+2025-11-26 19:34:52,219 - INFO - Saved training curves to results/training_curves.png
+2025-11-26 19:34:52,219 - INFO - Saved metrics to results/metrics.txt
+2025-11-26 19:34:52,219 - INFO - Training complete.

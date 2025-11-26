@@ -67,6 +67,7 @@ Identified from `eda_summary.json` and manual inspection:
 1. **Missing labels:** 14.2 percent of rows lack `fresh_weight_total`, so a notable subset of imagery cannot be used for supervised learning without semi-supervised approaches.
 2. **Sparse metadata:** `age_days` is missing in 11.5 percent of the entries, limiting longitudinal analysis.
 3. **Leakage risk:** 168 plant identifiers have multiple snapshots (up to 42). Random row-based splits would leak the same plant into training and validation sets, so `GroupShuffleSplit` groups by `plant_number`.
+4. **Leakage risk:** Also group by experiment_id, beacuse there is a negative correlation of -0.4.
 
 ## Modeling Approach
 
@@ -78,10 +79,10 @@ Identified from `eda_summary.json` and manual inspection:
 
 ## Training Run and Results
 
-Command executed on CPU:
+Command executed on CPU (with default hyperparameters):
 
 ```
-python train_model.py --epochs 2 --batch_size 16 --learning_rate 5e-4 --model_out models/resnet18_biomass.pt --freeze_backbone
+python train_model.py
 ```
 
 Artifacts:
