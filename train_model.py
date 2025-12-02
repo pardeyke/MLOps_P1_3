@@ -24,20 +24,29 @@ from torchvision.models import ResNet18_Weights, ResNet34_Weights, ResNet50_Weig
 from PIL import Image
 
 # %% Constants
+# Konstanten für die Normalisierung und Pfade
+# IMAGENET_STATS: Wir verwenden ImageNet-Statistiken zur Normalisierung, weil unser
+# vortrainiertes ResNet-Modell auf ImageNet trainiert wurde (Transfer Learning)
 IMAGENET_STATS = {
-    "mean": [0.485, 0.456, 0.406],
-    "std": [0.229, 0.224, 0.225],
+    "mean": [0.485, 0.456, 0.406],  # Durchschnittswerte pro RGB-Kanal
+    "std": [0.229, 0.224, 0.225],    # Standardabweichung pro RGB-Kanal
 }
+# Pfade zu Daten und Ausgabeverzeichnissen
 DEFAULT_DATA_DIR = Path("infos/mlops_biomass_data")
 DEFAULT_IMAGE_DIR = DEFAULT_DATA_DIR / "images_med_res"
 DEFAULT_LABELS = DEFAULT_DATA_DIR / "digital_biomass_labels.xlsx"
-MODELS_DIR = Path("models")
-RESULTS_DIR = Path("results")
-LOG_FILE = Path("training.log")
+MODELS_DIR = Path("models")      # Hier werden trainierte Modelle gespeichert
+RESULTS_DIR = Path("results")    # Hier werden Metriken und Plots gespeichert
+LOG_FILE = Path("training.log")  # Logdatei für Experiment Tracking
 
 
 # %% Utility helpers
+# Hilfsfunktionen für Reproduzierbarkeit und Logging
+
 def set_seed(seed: int) -> None:
+    """Setzt die Seeds für alle Zufallsgeneratoren, um Reproduzierbarkeit zu gewährleisten.
+    Ohne feste Seeds können wir Experimente nicht vergleichen oder debuggen.
+    """
     random.seed(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
@@ -45,6 +54,11 @@ def set_seed(seed: int) -> None:
 
 
 def get_git_hash() -> Optional[str]:
+    """Liest den aktuellen Git-Commit-Hash aus.
+    EXPERIMENT TRACKING:
+    Der Git-Hash ermöglicht es uns, jeden Trainingslauf mit dem exakten Code-Stand zu verknüpfen.
+    Dies ist essenziell für die Nachvollziehbarkeit und Reproduzierbarkeit.
+    """
     try:
         result = subprocess.check_output(["git", "rev-parse", "HEAD"], stderr=subprocess.DEVNULL)
         return result.decode("utf-8").strip()
@@ -53,16 +67,22 @@ def get_git_hash() -> Optional[str]:
 
 
 def setup_logging() -> logging.Logger:
+    """Richtet Logging für Console und Datei ein.
+    Strukturiertes Logging erlaubt uns, jeden Trainingsschritt nachzuverfolgen.
+    Die Log-Datei dient als Experiment-Historie und Debugging-Hilfe.
+    """
     logger = logging.getLogger("training")
     logger.setLevel(logging.INFO)
     logger.handlers.clear()
 
     formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
 
+    # File Handler: Speichert alle Logs in training.log
     file_handler = logging.FileHandler(LOG_FILE, mode="w", encoding="utf-8")
     file_handler.setFormatter(formatter)
     logger.addHandler(file_handler)
 
+    # Stream Handler: Zeigt Logs auch in der Console an
     stream_handler = logging.StreamHandler(sys.stdout)
     stream_handler.setFormatter(formatter)
     logger.addHandler(stream_handler)
@@ -70,16 +90,27 @@ def setup_logging() -> logging.Logger:
 
 
 # %% Dataset definition
+# PyTorch Dataset für Biomasse-Vorhersage
 class BiomassDataset(Dataset):
+    """Custom Dataset für Pflanzenbilder und Biomasse-Labels.
+    DATA PIPELINE:
+    Diese Klasse implementiert die PyTorch Dataset-API und lädt Bilder lazy (nur wenn benötigt), um Speicher zu sparen.
+    """
     def __init__(self, frame: pd.DataFrame, image_dir: Path, transform: transforms.Compose):
+        """Initialisiert Dataset mit Metadaten, Bildpfad und Transformationen."""
         self.frame = frame.reset_index(drop=True)
         self.image_dir = image_dir
-        self.transform = transform
+        self.transform = transform  # Augmentationen für Training, nur Resize für Validation
 
     def __len__(self) -> int:
+        """Gibt Anzahl der Samples zurück."""
         return len(self.frame)
 
     def __getitem__(self, idx: int) -> Tuple[torch.Tensor, torch.Tensor]:
+        """Lädt ein Bild, wendet Transformationen an und gibt Tensor + Target zurück.
+        DATA AUGMENTATION:
+        Transformationen wie Flip, Rotation und ColorJitter verhindern Overfitting.
+        """
         row = self.frame.iloc[idx]
         image_path = self.image_dir / row["filename"]
         if not image_path.exists():
@@ -91,14 +122,24 @@ class BiomassDataset(Dataset):
 
 
 # %% Data preparation
+# Funktionen zur Datenaufbereitung
+
 def load_labels(labels_path: Path) -> pd.DataFrame:
+    """Lädt Metadaten aus Excel und filtert Zeilen mit fehlenden Labels.
+    DATA QUALITY:
+    Nur Samples mit vollständigen Biomasse-Labels können für supervised learning verwendet werden.
+    """
     df = pd.read_excel(labels_path)
-    df = df[df["fresh_weight_total"].notna()].copy()
-    df["plant_number"] = df["plant_number"].fillna(-1).astype(int)
+    df = df[df["fresh_weight_total"].notna()].copy()  # Filtere fehlende Targets
+    df["plant_number"] = df["plant_number"].fillna(-1).astype(int)  # Fehlende IDs mit -1 ersetzen
     return df
 
 
 def filter_missing_images(df: pd.DataFrame, image_dir: Path, logger: logging.Logger) -> pd.DataFrame:
+    """Entfernt Zeilen, deren Bilddateien nicht existieren.
+    DATA VALIDATION:
+    Dies verhindert Fehler während des Trainings und dokumentiert fehlende Daten im Log.
+    """
     def exists(row: pd.Series) -> bool:
         return (image_dir / row["filename"]).exists()
 
@@ -112,13 +153,27 @@ def filter_missing_images(df: pd.DataFrame, image_dir: Path, logger: logging.Log
 def create_splits(
     df: pd.DataFrame, test_size: float, random_state: int
 ) -> Tuple[pd.DataFrame, pd.DataFrame]:
+    """Teilt Daten in Training und Validation, gruppiert nach plant_number.
+    DATA LEAKAGE VERMEIDEN:
+    GroupShuffleSplit stellt sicher, dass alle Bilder einer Pflanze entweder
+    nur im Training ODER nur in Validation landen. Ein einfacher train_test_split
+    würde mehrere Bilder derselben Pflanze auf beide Sets verteilen und damit
+    zu unrealistisch hohen Metriken führen (Data Leakage).
+    """
     splitter = GroupShuffleSplit(n_splits=1, test_size=test_size, random_state=random_state)
-    groups = df["plant_number"].astype(int)
+    groups = df["plant_number"].astype(int)  # Gruppierung nach Pflanze
     train_idx, val_idx = next(splitter.split(df, groups=groups))
     return df.iloc[train_idx].reset_index(drop=True), df.iloc[val_idx].reset_index(drop=True)
 
 
 def build_transforms(image_size: int = 224) -> Tuple[transforms.Compose, transforms.Compose]:
+    """Erstellt Transformationen für Training (mit Augmentation) und Validation (ohne).
+    DATA AUGMENTATION (Overfitting vermeiden):
+    - RandomHorizontalFlip: Pflanzen können gespiegelt werden
+    - RandomRotation: Leichte Drehungen simulieren verschiedene Kamerawinkel
+    - ColorJitter: Variationen in Helligkeit/Kontrast machen das Modell robust
+    Validation bekommt KEINE Augmentation, um faire Metriken zu erhalten.
+    """
     train_transform = transforms.Compose(
         [
             transforms.Resize((image_size, image_size)),
@@ -131,7 +186,7 @@ def build_transforms(image_size: int = 224) -> Tuple[transforms.Compose, transfo
     )
     eval_transform = transforms.Compose(
         [
-            transforms.Resize((image_size, image_size)),
+            transforms.Resize((image_size, image_size)),  # Nur Resize, keine Augmentation
             transforms.ToTensor(),
             transforms.Normalize(IMAGENET_STATS["mean"], IMAGENET_STATS["std"]),
         ]
@@ -156,10 +211,22 @@ def create_dataloaders(
 
 
 # %% Model setup
+# Modellarchitektur mit Transfer Learning
+
 def build_model(model_name: str, freeze_backbone: bool) -> nn.Module:
+    """Baut ein ResNet-Modell mit vortrainierten Gewichten und Custom Head.
+    TRANSFER LEARNING:
+    - Wir laden ein auf ImageNet vortrainiertes ResNet (gelernte Features für Bildanalyse)
+    - Backbone wird eingefroren (freeze_backbone=True): nur der neue Head wird trainiert
+    - Dies spart Zeit und verhindert Overfitting bei kleinen Datensätzen (~3k Bilder)
+    REGRESSION HEAD:
+    - Ersetze die Klassifikations-Layer durch einen Regressions-Head
+    - Dropout(0.3) reduziert Overfitting
+    - Output: 1 Wert (Biomasse in Gramm)
+    """
     model_name = model_name.lower()
     if model_name == "resnet18":
-        weights = ResNet18_Weights.DEFAULT
+        weights = ResNet18_Weights.DEFAULT  # ImageNet-vortrainierte Gewichte
         backbone = models.resnet18(weights=weights)
     elif model_name == "resnet34":
         weights = ResNet34_Weights.DEFAULT
@@ -171,20 +238,24 @@ def build_model(model_name: str, freeze_backbone: bool) -> nn.Module:
         raise ValueError(f"Unsupported model_name '{model_name}'.")
 
     if freeze_backbone:
+        # Friere alle Backbone-Parameter ein (Transfer Learning)
         for param in backbone.parameters():
             param.requires_grad = False
 
+    # Ersetze den klassischen FC-Layer durch einen Regressions-Head
     in_features = backbone.fc.in_features
     backbone.fc = nn.Sequential(
-        nn.Dropout(p=0.3),
-        nn.Linear(in_features, 256),
-        nn.ReLU(inplace=True),
-        nn.Linear(256, 1),
+        nn.Dropout(p=0.3),           # Regularisierung gegen Overfitting
+        nn.Linear(in_features, 256), # Hidden Layer
+        nn.ReLU(inplace=True),       # Aktivierung
+        nn.Linear(256, 1),           # Output: 1 Wert (Biomasse)
     )
     return backbone
 
 
 # %% Training utilities
+# Trainingsfunktionen
+
 def train_one_epoch(
     model: nn.Module,
     loader: DataLoader,
@@ -192,41 +263,72 @@ def train_one_epoch(
     optimizer: torch.optim.Optimizer,
     device: torch.device,
 ) -> float:
-    model.train()
+    """Trainiert das Modell für eine Epoche.
+    TRAINING LOOP:
+    1. model.train() aktiviert Dropout und Batch Normalization
+    2. Forward Pass: Berechne Vorhersagen
+    3. Loss berechnen (MSE für Regression)
+    4. Backward Pass: Gradienten berechnen
+    5. Optimizer Update: Gewichte anpassen
+    """
+    model.train()  # Training-Modus: Dropout aktiviert
     total_loss = 0.0
     num_samples = 0
     for images, targets in loader:
+        # Daten auf Device verschieben (CPU oder GPU)
         images = images.to(device)
-        targets = targets.to(device).unsqueeze(1)
-        optimizer.zero_grad(set_to_none=True)
+        targets = targets.to(device).unsqueeze(1)  # Shape: [batch_size, 1]
+        
+        # Gradienten zurücksetzen
+        optimizer.zero_grad(set_to_none=True)  # Speicher-effizienter als zero_grad()
+        
+        # Forward Pass
         outputs = model(images)
-        loss = criterion(outputs, targets)
-        loss.backward()
-        optimizer.step()
+        loss = criterion(outputs, targets)  # MSE Loss
+        
+        # Backward Pass
+        loss.backward()  # Berechne Gradienten
+        
+        # Parameter Update
+        optimizer.step()  # AdamW Optimizer passt Gewichte an
 
+        # Akkumuliere Loss (gewichtet nach Batch-Größe)
         batch_size = images.size(0)
         total_loss += loss.item() * batch_size
         num_samples += batch_size
-    return total_loss / max(1, num_samples)
+    return total_loss / max(1, num_samples)  # Durchschnittlicher Loss
 
 
-@torch.no_grad()
+@torch.no_grad()  # Deaktiviert Gradient-Berechnung (spart Speicher)
 def evaluate(model: nn.Module, loader: DataLoader, criterion: nn.Module, device: torch.device) -> Dict[str, float]:
-    model.eval()
+    """Evaluiert das Modell auf dem Validation-Set.
+    EVALUATION:
+    - model.eval() deaktiviert Dropout und Batch Normalization
+    - @torch.no_grad() verhindert Gradient-Tracking (schneller, weniger RAM)
+    - MSE und RMSE als Metriken für Regression
+    - RMSE ist interpretierbar: durchschnittlicher Vorhersagefehler in Gramm
+    """
+    model.eval()  # Evaluation-Modus: Dropout deaktiviert
     total_loss = 0.0
     total_samples = 0
-    preds: List[float] = []
-    targets_buffer: List[float] = []
+    preds: List[float] = []         # Sammle alle Vorhersagen
+    targets_buffer: List[float] = [] # Sammle alle echten Werte
     for images, targets in loader:
         images = images.to(device)
         targets = targets.to(device).unsqueeze(1)
+        
+        # Nur Forward Pass, kein Backward
         outputs = model(images)
         loss = criterion(outputs, targets)
+        
         batch_size = images.size(0)
         total_loss += loss.item() * batch_size
         total_samples += batch_size
+        
+        # Speichere Predictions und Targets für spätere Analyse
         preds.extend(outputs.squeeze(1).cpu().tolist())
         targets_buffer.extend(targets.squeeze(1).cpu().tolist())
+    
     mse = total_loss / max(1, total_samples)
     rmse = float(np.sqrt(mse))
     return {"mse": mse, "rmse": rmse, "preds": preds, "targets": targets_buffer}
@@ -251,7 +353,15 @@ def save_metrics(metrics: Dict[str, float], output_path: Path) -> None:
 
 
 # %% Main training orchestration
+# Hauptfunktion: Argument Parsing und Training Pipeline
+
 def parse_args() -> argparse.Namespace:
+    """Parser für Command-Line Arguments.
+    CLI INTERFACE:
+    Alle Hyperparameter sind über die Command-Line steuerbar.
+    Dies ermöglicht Experiment Tracking ohne Code-Änderungen.
+    Beispiel: python train_model.py --epochs 30 --batch_size 64 --learning_rate 0,0001
+    """
     parser = argparse.ArgumentParser(description="Train a ResNet-based biomass regressor.")
     parser.add_argument("--epochs", type=int, default=20, help="Number of training epochs.")
     parser.add_argument("--batch_size", type=int, default=32, help="Mini-batch size.")
@@ -281,6 +391,17 @@ def resolve_device(device_arg: str) -> torch.device:
 
 
 def main() -> None:
+    """Haupt-Trainingspipeline.
+    MLOps WORKFLOW:
+    1. Argument Parsing und Validierung
+    2. Reproduzierbarkeit: Seed setzen, Git-Hash loggen
+    3. Daten laden und splitten (mit GroupShuffleSplit)
+    4. Modell bauen (Transfer Learning)
+    5. Training Loop mit Logging
+    6. Best Model speichern
+    7. Metriken und Plots für Experiment Tracking
+    """
+    # Argumente parsen und Pfade validieren
     args = parse_args()
     args.data_dir = Path(args.data_dir)
     if args.labels_path is None:
@@ -305,7 +426,9 @@ def main() -> None:
     set_seed(args.seed)
     logger = setup_logging()
     logger.info("Starting training run.")
-    logger.info("Arguments: %s", vars(args))
+    logger.info("Arguments: %s", vars(args))  # Logge alle Hyperparameter
+    
+    # Git-Hash loggen für Code-Versionierung
     git_hash = get_git_hash()
     if git_hash:
         logger.info("Git commit: %s", git_hash)
@@ -313,8 +436,11 @@ def main() -> None:
     device = resolve_device(args.device)
     logger.info("Using device: %s", device)
 
-    df = load_labels(args.labels_path)
-    df = filter_missing_images(df, args.image_dir, logger)
+    # Daten laden und validieren
+    df = load_labels(args.labels_path)  # Lade Excel mit Metadaten
+    df = filter_missing_images(df, args.image_dir, logger)  # Entferne fehlende Bilder
+    
+    # Train/Val Split mit GroupShuffleSplit (verhindert Data Leakage)
     train_df, val_df = create_splits(df, args.val_split, args.seed)
     logger.info("Training samples: %d | Validation samples: %d", len(train_df), len(val_df))
 
@@ -326,22 +452,35 @@ def main() -> None:
         num_workers=args.num_workers,
     )
 
+    # Modell bauen mit Transfer Learning
     model = build_model(args.model_name, freeze_backbone=freeze_backbone).to(device)
+    
+    # Loss-Funktion: MSE für Regression
     criterion = nn.MSELoss()
+    
+    # Optimizer: AdamW (Adam mit Weight Decay für bessere Regularisierung)
+    # filter() stellt sicher, dass nur trainierbare Parameter optimiert werden
     optimizer = torch.optim.AdamW(filter(lambda p: p.requires_grad, model.parameters()), lr=args.learning_rate)
 
-    best_val_loss = float("inf")
-    train_losses: List[float] = []
-    val_losses: List[float] = []
+    # Training Loop
+    best_val_loss = float("inf")  # Tracking des besten Models
+    train_losses: List[float] = []  # Für Plotting
+    val_losses: List[float] = []    # Für Plotting
     best_metrics: Dict[str, float] = {}
+    
     for epoch in range(1, args.epochs + 1):
+        # Eine Epoche Training
         train_loss = train_one_epoch(model, train_loader, criterion, optimizer, device)
+        
+        # Evaluation auf Validation Set
         metrics = evaluate(model, val_loader, criterion, device)
         val_loss = metrics["mse"]
 
+        # Losses sammeln für Plotting
         train_losses.append(train_loss)
         val_losses.append(val_loss)
 
+        # Logge Metriken
         logger.info(
             "Epoch %d/%d - train_loss: %.5f - val_loss: %.5f - val_rmse: %.5f",
             epoch,
@@ -351,16 +490,20 @@ def main() -> None:
             metrics["rmse"],
         )
 
+        # Speichere Model, wenn es besser ist als bisheriges (Model Checkpointing)
         if val_loss < best_val_loss:
             best_val_loss = val_loss
             best_metrics = {"val_mse": val_loss, "val_rmse": metrics["rmse"], "epoch": epoch}
-            torch.save(model.state_dict(), args.model_out)
+            torch.save(model.state_dict(), args.model_out)  # Speichere nur Gewichte
             logger.info("Saved new best model to %s", args.model_out)
 
-    save_training_curves(train_losses, val_losses, args.curves_path)
+    # Speichere Artifacts
+    save_training_curves(train_losses, val_losses, args.curves_path)  # Loss-Plot
     logger.info("Saved training curves to %s", args.curves_path)
-    save_metrics(best_metrics, args.metrics_path)
+    
+    save_metrics(best_metrics, args.metrics_path)  # Beste Metriken als JSON
     logger.info("Saved metrics to %s", args.metrics_path)
+    
     logger.info("Training complete.")
 
 
