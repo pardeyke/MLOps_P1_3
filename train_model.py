@@ -468,7 +468,7 @@ def main() -> None:
     val_losses: List[float] = []    # Für Plotting
     best_metrics: Dict[str, float] = {}
     
-    for epoch in range(0, args.epochs):
+    for epoch in range(1, args.epochs + 1):
         # Eine Epoche Training
         train_loss = train_one_epoch(model, train_loader, criterion, optimizer, device)
         
