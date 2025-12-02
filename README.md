@@ -118,6 +118,21 @@ Training for two epochs already converges reasonably thanks to the frozen backbo
 
 ## Reproduction Guide
 
+0. **Create and load virtual environemnt**
+   Create:
+   ```
+   python -m venv .venv
+   ```
+
+   Load:
+   ```
+   source .venv/bin/activate
+   ```
+
+   Exit venv:
+   ```
+   deactivate
+   ```
 1. **Install dependencies**
    ```
    pip install -r requirements.txt
